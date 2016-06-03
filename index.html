@@ -1,0 +1,104 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head> 
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+        <meta name="viewport" content=" width=device-width,initial-scale=1">
+        <title>PHP+jQuery+html5实现图片选取裁剪上传</title>
+        <meta name="keywords" content="裁剪上传,手机图片上传" />
+        <meta name="description" content="在网上找到了图片上传插件jquery.min.js，但没有上传功能，自己花了10分钟给加上去了哈，有bug留言，一般当天改完上传。" />
+
+        <link href="css/jquery.Jcrop.min.css" rel="stylesheet" type="text/css" />
+        <style>
+            .error {
+                font-size: 18px;
+                font-weight: bold;
+                color: red;
+                margin:10px 0
+            }
+            label{width:60px;display: inline-block}
+            .info li{margin:10px 0}
+            
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="demo">
+                <form id="upload_form" enctype="multipart/form-data" method="post" action="upload.php" onsubmit="return checkForm()">
+                    <!-- hidden crop params -->
+                    <input type="hidden" id="x1" name="x1" autocomplete="off" />
+                    <input type="hidden" id="y1" name="y1" autocomplete="off"/>
+                    <input type="hidden" id="x2" name="x2" autocomplete="off" />
+                    <input type="hidden" id="y2" name="y2" autocomplete="off" />
+                    <input type="hidden" id="w" name="w" autocomplete="off" />
+                    <input type="hidden" id="h" name="h" autocomplete="off" />
+
+                    <input type="file" name="image_file" id="image_file"  />
+                    <div class="error">注意：上传前，先截图</div>
+                   
+                        <img id="preview" />
+                      
+                        <input type="submit" value="上传" class="btn" />
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div id="infos"></div>
+        <script type="text/javascript" src="js/jquery.min.js"></script> 
+        <script src="js/jquery.Jcrop.min.js"></script>
+        <script src="js/script.js"></script>
+    </body>
+    <script>
+        //$("#image_file").change(function(){
+            $(document).cropUpload({oFile:"#image_file",target:"#preview",change:function(e){
+                $("#x1").val(e.x);
+                $("#x2").val(e.x2);
+                $("#y1").val(e.y);
+                $("#y2").val(e.y2);
+                $("#w").val(e.w);
+                $("#h").val(e.h);
+                document.getElementById("infos").innerHTML = "x:"+e.x+"y:"+e.y+"x2:"+e.x2+"y2:"+e.y2+"w:"+e.w+"x:"+e.h;
+            }})
+       // })
+function getMousePoint(ev) {
+    var point = {
+        x:0,
+        y:0
+    };
+
+    if(typeof window.pageYOffset != 'undefined') {
+        point.x = window.pageXOffset;
+        point.y = window.pageYOffset;
+    }
+    else if(typeof document.compatMode != 'undefined' && document.compatMode != 'BackCompat') {
+        point.x = document.documentElement.scrollLeft;
+        point.y = document.documentElement.scrollTop;
+    }
+    else if(typeof document.body != 'undefined') {
+        point.x = document.body.scrollLeft;
+        point.y = document.body.scrollTop;
+    }
+
+    point.x += ev.clientX;
+    point.y += ev.clientY;
+
+    return point;
+}
+
+
+function addEvent(node, type, listener) {
+    if(node.addEventListener) {
+        node.addEventListener(type, listener, false);
+        return true;
+    } else if(node.attachEvent) {
+        node['e' + type + listener] = listener;
+        node[type + listener] = function() {
+            node['e' + type + listener](window.event);
+        };
+        node.attachEvent('on' + type, node[type + listener]);
+        return true;
+    }
+    return false;
+}
+
+    </script>
+</html>
