@@ -1,2 +1,3 @@
 # cropUpload
-基于jquery，图片裁切上传功能
+图片上传以及裁切上传功能
+基于angularjs以及js原生代码裁切功能
