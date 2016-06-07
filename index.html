@@ -1,64 +1,201 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-    <head> 
-        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
-        <meta name="viewport" content=" width=device-width,initial-scale=1">
-        <title>PHP+jQuery+html5实现图片选取裁剪上传</title>
-        <meta name="keywords" content="裁剪上传,手机图片上传" />
-        <meta name="description" content="在网上找到了图片上传插件jquery.min.js，但没有上传功能，自己花了10分钟给加上去了哈，有bug留言，一般当天改完上传。" />
+<!DOCTYPE html >
+<html lang="en">
+<head> 
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+    <meta name="viewport" content=" width=device-width,initial-scale=1">
+    <title>angular+jcrop图片选取裁剪上传</title>
+    <meta name="keywords" content="" />
+    <meta name="description" content="" />
+    <script src="//cdn.bootcss.com/angular.js/1.4.9/angular.js"></script>
+    <script src="js/image.crop.js"></script>
 
-        <link href="css/jquery.Jcrop.min.css" rel="stylesheet" type="text/css" />
-        <style>
-            .error {
-                font-size: 18px;
-                font-weight: bold;
-                color: red;
-                margin:10px 0
+</head>
+<body ng-app="upload" >
+<div  ajax-upload style="border:solid 5px #333" action="upload.php" preview="preview" jcrop="zuobiao" btn="jcropBtn" >上传图片</div>
+<div id="preview"></div>
+<button type="button" id="jcropBtn">确定</button>
+
+
+<div  ajax-upload style="border:solid 5px #333" preview="preview">上传图片</div>
+
+
+</body>
+<script>
+function fun(res){
+    console.log(res);
+}
+
+
+/*************************************************
+*上传插件，基于angularjs,依赖裁切插件 image.crop.js
+*使用例子
+*<div  ajax-upload                     
+    style="border:solid 5px #333"    
+    action="upload.php" 
+    preview="preview" 
+    jcrop="zuobiao" >上传图片</div>
+*<div id="preview"></div>
+*   1、使用css样式自定义
+*   2、action 服务端上传地址 *
+*   3、preview   上传预览或裁切选区 指定ID 
+*   4、jcrop="name"     使用裁切工具，并返回裁切坐标值到jcrop对应的表单名称里，4个值分别表示左上，右上，左下，右下
+*   5、name = "file"    上传表单的名称
+*   6、accept = "images/jepg"   允许的上传类型
+*   7、thumb = "100,100"         预览选区大小，默认100,100
+*   8、crop = "50,50"        初始化或默认裁切大小
+*   9、auto = true           是否自动上传（true || false）  默认自动上传
+*   10、btn            上传按钮 指定ID，如果设置此参数则auto失效
+
+* 特别提示：如果传参jcrop 那么auto设置为true将失效
+************************************************/
+angular.module('upload',[])
+.directive("ajaxUpload",function($http,$rootScope){
+    return {
+        restrict : "EA",
+        template : '',
+        replace : false,
+        scope : {
+            callback:"@",
+            jcrop:"@"
+        },
+        controller:function($scope,$element,$attrs){
+
+            var def = {
+                action : $attrs.action || "",
+                method : $attrs.method || "post",
+                enctype : "multipart/form-data",
+                accept : $attrs.accept || "*/*",
+                name : $attrs.name || "file",
+                auto : $attrs.auto || true,
+                thumb : $attrs.thumb || "200,100",
+                crop : $attrs.crop || "50,50",
+                preview : $attrs.preview || "",
+                btn: $attrs.btn || false
             }
-            label{width:60px;display: inline-block}
-            .info li{margin:10px 0}
-            
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="demo">
-                <form id="upload_form" enctype="multipart/form-data" method="post" action="upload.php" onsubmit="return checkForm()">
-                    <!-- hidden crop params -->
-                    <input type="hidden" id="x1" name="x1" autocomplete="off" />
-                    <input type="hidden" id="y1" name="y1" autocomplete="off"/>
-                    <input type="hidden" id="x2" name="x2" autocomplete="off" />
-                    <input type="hidden" id="y2" name="y2" autocomplete="off" />
-                    <input type="hidden" id="w" name="w" autocomplete="off" />
-                    <input type="hidden" id="h" name="h" autocomplete="off" />
 
-                    <input type="file" name="image_file" id="image_file"  />
-                    <div class="error">注意：上传前，先截图</div>
-                   
-                        <img id="preview" />
+            $scope.wm_preview = def.preview;
+            $scope.thumb = def.thumb.split(",");
+            $scope.crop = def.crop.split(",");
+            $scope.btn = def.btn?def.btn:(def.auto=="false"?false:true);
+
+            angular.element($element).css({"position":"relative","border":"solid 1px #ccc","padding":"5px 10px","textAlign":"center"});
+
+            //var formI = angular.element(document.getElementById(formName)).length;
+            var iframeName = "WMupload_iframe";
+            var formName = "WMupload_form";
+            var formI = angular.element(document.getElementsByClassName("WM_UPLOADFORM")).length;
+                iframeName = iframeName + formI;
+                formName = formName + formI;
+                $scope.formNum = formI;  //上传表单个数
+
+            //创建文件input
+            angular.element($element).append(
+                '<input style="position:absolute;height:100%;width:100%;left:0;top:0;opacity:0;" form="'+formName+'" name="'+def.name+'" type="file" />'
+            );
+
+            //创建iframe框架
+            angular.element($element).append(
+                '<iframe id="'+ iframeName +'" name="'+ iframeName +'" style="display:none"></iframe>'
+            );
+
+            //创建form 表单
+            angular.element(document.body).append(
+                '<form name="'+formName+'" class="WM_UPLOADFORM" target="'+iframeName+'" id="'+formName+'" action="'+def.action+'" enctype="'+def.enctype+'" method="'+def.method+'"></form>'
+            );
+
+
+            //创建自定义裁切选区
+            if(document.getElementById("WM_JSCROP_STYLE")==null){
+                angular.element(document.head).append(
+                    '<style id="WM_JSCROP_STYLE">'+
+                    '#rRightDown,#rLeftDown,#rLeftUp,#rRightUp,#rRight,#rLeft,#rUp,#rDown{position:absolute;background:#FFF;border: 1px solid #333;width: 6px;height: 6px;z-index:500;font-size:0;opacity: 0.5;filter:alpha(opacity=50);}'+
+                    '#rLeftDown,#rRightUp{cursor:ne-resize;}#rRightDown,#rLeftUp{cursor:nw-resize;}#rRight,#rLeft{cursor:e-resize;}#rUp,#rDown{cursor:n-resize;}'+
+                    '#rLeftDown{left:-4px;bottom:-4px;}#rRightUp{right:-4px;top:-4px;}#rRightDown{right:-4px;bottom:-4px;background-color:#00F;}#rLeftUp{left:-4px;top:-4px;}#rRight{right:-4px;top:50%;margin-top:-4px;}#rLeft{left:-4px;top:50%;margin-top:-4px;}#rUp{top:-4px;left:50%;margin-left:-4px;}#rDown{bottom:-4px;left:50%;margin-left:-4px;}'+
+                    '#WM_cropDiv{}.wm_dragDiv{border:1px dashed #fff; width:'+$scope.crop[0]+'px; height:'+$scope.crop[1]+'px; top:0; left:0px; cursor:move; }'+
+                    '</style>'
+                )
+            }
+        },
+        link:function($scope,$element,$attrs){
+            //<div id="bgDiv"><div id="dragDiv"><div id="rRightDown"> </div><div id="rLeftDown"> </div><div id="rRightUp"> </div><div id="rLeftUp"> </div><div id="rRight"> </div><div id="rLeft"> </div><div id="rUp"> </div><div id="rDown"></div></div></div>
+            //创建预览区域
+            if($scope.wm_preview){
+                var viewDom = angular.element(document.getElementById($scope.wm_preview)).append($scope.jcrop?'<div id="WM_cropDiv'+$scope.formNum+'"></div>':'<div></div>');
+                    $scope.viewDom = viewDom.children();
+                    $scope.viewDom = $scope.viewDom.eq( $scope.viewDom.length-1 );
+            }
+
+            //上传表单选择事件
+            angular.element($element).find("input").bind("change",function(){
+                var reader = new FileReader();
+                //是否创建预览
+                if($scope.wm_preview){
+                    var oFile = this.files[0];
+                    reader.onload = function(){    
+                        //angular.element(document.getElementById($scope.wm_preview)) src="'+reader.result+'" style="height:200px;" 
+                        //$scope.viewDom.html('<img src="'+reader.result+'" style="height:200px;" ></img>'); 
                       
-                        <input type="submit" value="上传" class="btn" />
-                    </div>
-                </form>
-            </div>
-        </div>
-        <div id="infos"></div>
-        <script type="text/javascript" src="js/jquery.min.js"></script> 
-        <script src="js/jquery.Jcrop.min.js"></script>
-        <script src="js/script.js"></script>
-    </body>
-    <script>
-        //$("#image_file").change(function(){
-            $(document).cropUpload({oFile:"#image_file",target:"#preview",change:function(e){
-                $("#x1").val(e.x);
-                $("#x2").val(e.x2);
-                $("#y1").val(e.y);
-                $("#y2").val(e.y2);
-                $("#w").val(e.w);
-                $("#h").val(e.h);
-                document.getElementById("infos").innerHTML = "x:"+e.x+"y:"+e.y+"x2:"+e.x2+"y2:"+e.y2+"w:"+e.w+"x:"+e.h;
-            }})
-       // })
+                        //是否启用裁剪插件，需引入jcrop.min.js
+                        if($scope.jcrop){
+                            var cropDiv = "WM_cropDiv"+$scope.formNum, dragDiv="WM_dragDiv"+$scope.formNum;
+                            $scope.viewDom.html('<div id="'+dragDiv+'" class="wm_dragDiv"><input form="WMupload_form'+$scope.formNum+'" type="hidden" name="'+$scope.jcrop+'"/><div id="rRightDown"> </div><div id="rLeftDown"> </div><div id="rRightUp"> </div><div id="rLeftUp"> </div><div id="rRight"> </div><div id="rLeft"> </div><div id="rUp"> </div><div id="rDown"></div></div>');
+                            var ic = new ImgCropper(cropDiv, dragDiv, reader.result , {
+                                Width: $scope.thumb[0], Height: $scope.thumb[1], Color: "#555",
+                                Resize: true,coord:$scope.jcrop,
+                                Right: "rRight", Left: "rLeft", Up: "rUp", Down: "rDown",
+                                RightDown: "rRightDown", LeftDown: "rLeftDown", RightUp: "rRightUp", LeftUp: "rLeftUp",
+                                Preview: "viewDiv", viewWidth: 300, viewHeight: 300
+                            })
+
+                        }else{
+                            $scope.viewDom.html('<img src="'+reader.result+'" style="height:200px;" ></img>'); 
+                        }
+                    }
+                    
+                    reader.readAsDataURL(this.files[0]);
+                }
+                var theThis = this;
+                if($scope.btn===true && !$scope.jcrop){
+                    document.getElementById(theThis.getAttribute("form")).submit();
+                }else{
+                    angular.element(document.getElementById($scope.btn)).bind("click",function(){
+                        document.getElementById(theThis.getAttribute("form")).submit();
+                    })
+                }
+            });
+
+            //表单提交触发框架加载事件，callback - 函数回调
+            angular.element($element).find("iframe").bind("load",function(callback){
+                try {                    
+                    //console.log(this.contentWindow)
+                    try {
+                        str = this.contentDocument.body.innerHTML;
+                        var jsons = angular.fromJson(str);
+                        angular.extend(jsons,{"status":200});
+                        var func = $attrs.callback+"("+ angular.toJson(jsons) +")";
+                        eval(func);
+                    } catch(e) {
+                        if(this.contentWindow.document.contentType == "text/json"){
+                            str = this.contentDocument.body.innerText;
+                            var jsons = angular.fromJson(str);
+                            angular.extend(jsons,{"status":200});
+                            var func = $attrs.callback+"("+ angular.toJson(jsons) +")";
+                            eval(func);
+                        }else{
+                            console.log(e)
+                        }
+                    }
+                 } catch(e) {
+                     console.log(e);
+                 } 
+            })    
+        }
+    }  
+})
+
+ //$("#ppreview")
+
+
 function getMousePoint(ev) {
     var point = {
         x:0,

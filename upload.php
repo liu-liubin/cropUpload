@@ -4,7 +4,9 @@
   素材火
   http://www.sucaihuo.com
  */
-header("Content-type: text/html; charset=utf-8");
+header("Content-type: text/json; charset=utf-8");
+
+
 $maxSize = 1024 * 1024; //1M 设置附件上传大小
 $allowExts = array("gif", "jpg", "jpeg", "png"); // 设置附件上传类型
 $file_save = "upload/";
@@ -25,13 +27,13 @@ if (!$upload->upload()) {// 上传错误提示错误信息
     $info = $upload->getUploadFileInfo();
 	//var_dump($info);exit();
     $imgurl = $info[0]['savename'];
-
-    $x = $_POST['x1'];
-    $y = $_POST['y1'];
-    $x2 = $_POST['x2'];
-    $y2 = $_POST['y2'];
-    $w = $_POST['w'];
-    $h = $_POST['h'];
+    $arr = json_decode($_POST["zuobiao"],true);
+    $x = $arr['x1'];
+    $y = $arr['y1'];
+    $x2 = $arr['x2'];
+    $y2 = $arr['y2'];
+    $w = $arr['width'];
+    $h = $arr['height'];
     include_once("jcrop_image.class.php");
     $file_save = "upload/";
     $pic_name = $file_save . $imgurl;
