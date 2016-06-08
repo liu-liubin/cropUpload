@@ -1,8 +1,8 @@
 # cropUpload
 图片上传以及裁切上传功能，基于angularjs以及js原生代码裁切功能
 ##安装或引用
-angularjs+  
-image.crop.js
+<script src="//cdn.bootcss.com/angular.js/1.4.9/angular.js"></script>
+<script src="js/image.crop.js"></script>
 ##如何使用
 * html标签规则
 ```
@@ -26,9 +26,9 @@ image.crop.js
 3）jcrop="name"  
 ——返回裁切结果数据，包含有x1:左边距，x2:右边距，y1:上边距，y2:上边距，height:裁切高，width:裁切宽  
 4）name = "file"  
-——上传表单的名称，返回结果于该表单名称可用于表单传输值  
-5）accept = "images/jepg"  
-——允许的上传类型  
+——上传表单的名称
+5）accept = "images,application,text"  
+——允许的上传类型    
 6）thumb = "100,100"  
 ——预览选区大小，默认100,100  
 7）crop = "50,50"  
