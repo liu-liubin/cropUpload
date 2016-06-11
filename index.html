@@ -21,8 +21,11 @@
 
 </body>
 <script>
-function fun(res){
-    console.log(res);
+
+var ngUpload = {
+    uploading:function(e){
+        console.log(11111)
+    }
 }
 
 
@@ -74,6 +77,8 @@ angular.module('upload',[])
             }
 
             $scope.wm_preview = def.preview;
+            $scope.action = def.action;
+            $scope.name = def.name;
             $scope.thumb = def.thumb.split(",");
             $scope.crop = def.crop.split(",");
             $scope.btn = def.btn?def.btn:(def.auto=="false"?false:true);
@@ -117,20 +122,69 @@ angular.module('upload',[])
             }
         },
         link:function($scope,$element,$attrs){
-            //<div id="bgDiv"><div id="dragDiv"><div id="rRightDown"> </div><div id="rLeftDown"> </div><div id="rRightUp"> </div><div id="rLeftUp"> </div><div id="rRight"> </div><div id="rLeft"> </div><div id="rUp"> </div><div id="rDown"></div></div></div>
+            //声明变量，原生js 、html、XMLHttpRequest
+            var oFile,
+            fd = new FormData(),
+            xhr = new XMLHttpRequest(),
+            loaded, tot, per;
+            try{
+                beforeSend = ngUpload.before;
+                callback = ngUpload.callback;
+                uploading = ngUpload.uploading;
+            }catch(e){
+                console.log(e);
+            }
+            
+            //JS Ajax上传方式，html5 API支持
+            $scope.ajaxMethod = function(options){
+                //oFile = options.file.files[0];
+                for(var k in options){
+                    fd.append(k, options[k]);
+                }
+                if(beforeSend instanceof Function){
+                    if(beforeSend(file) === false){
+                        return false;
+                    }
+                }
+                
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState == 4 && xhr.status == 200) {
+                        if(callback instanceof Function){
+                            callback(xhr.responseText);
+                        }
+                    }
+                }
+     
+                //侦查当前附件上传情况
+                xhr.upload.onprogress = function(evt) {
+                    loaded = evt.loaded;
+                    tot = evt.total;
+                    per = Math.floor(100 * loaded / tot); //已经上传的百分比
+                    if(uploading instanceof Function){
+                        uploading(per);
+                    }
+                };
+     
+                xhr.open("post", $scope.action);
+                xhr.send(fd);
+                //ajax上传方式结束
+            }
+
             //创建预览区域
             if($scope.wm_preview){
                 var viewDom = angular.element(document.getElementById($scope.wm_preview)).append($scope.jcrop?'<div id="WM_cropDiv'+$scope.formNum+'"></div>':'<div></div>');
                     $scope.viewDom = viewDom.children();
                     $scope.viewDom = $scope.viewDom.eq( $scope.viewDom.length-1 );
             }
-
+            
             //上传表单选择事件
             angular.element($element).find("input").bind("change",function(){
+     
+                
                 var reader = new FileReader();
-                //是否创建预览
+                //是否创建预览------------预览裁切操作
                 if($scope.wm_preview){
-                    var oFile = this.files[0];
+                    //var oFile = this.files[0];
                     reader.onload = function(){    
                         //angular.element(document.getElementById($scope.wm_preview)) src="'+reader.result+'" style="height:200px;" 
                         //$scope.viewDom.html('<img src="'+reader.result+'" style="height:200px;" ></img>'); 
@@ -138,7 +192,7 @@ angular.module('upload',[])
                         //是否启用裁剪插件，需引入jcrop.min.js
                         if($scope.jcrop){
                             var cropDiv = "WM_cropDiv"+$scope.formNum, dragDiv="WM_dragDiv"+$scope.formNum;
-                            $scope.viewDom.html('<div id="'+dragDiv+'" class="wm_dragDiv"><input form="WMupload_form'+$scope.formNum+'" type="hidden" name="'+$scope.jcrop+'"/><div id="rRightDown"> </div><div id="rLeftDown"> </div><div id="rRightUp"> </div><div id="rLeftUp"> </div><div id="rRight"> </div><div id="rLeft"> </div><div id="rUp"> </div><div id="rDown"></div></div>');
+                            $scope.viewDom.html('<div id="'+dragDiv+'" class="wm_dragDiv"><input form="WMupload_form'+$scope.formNum+'" type="hidden" class="'+$scope.jcrop+'" name="'+$scope.jcrop+'"/><div id="rRightDown"> </div><div id="rLeftDown"> </div><div id="rRightUp"> </div><div id="rLeftUp"> </div><div id="rRight"> </div><div id="rLeft"> </div><div id="rUp"> </div><div id="rDown"></div></div>');
                             var ic = new ImgCropper(cropDiv, dragDiv, reader.result , {
                                 Width: $scope.thumb[0], Height: $scope.thumb[1], Color: "#555",
                                 Resize: true,coord:$scope.jcrop,
@@ -154,12 +208,22 @@ angular.module('upload',[])
                     
                     reader.readAsDataURL(this.files[0]);
                 }
+                //上传--------------------执行命令
                 var theThis = this;
                 if($scope.btn===true && !$scope.jcrop){
-                    document.getElementById(theThis.getAttribute("form")).submit();
+                    //ajax上传方式
+                    $scope.ajaxMethod(theThis);
+                    //iframe上传方式
+                    //document.getElementById(theThis.getAttribute("form")).submit();
                 }else{
-                    angular.element(document.getElementById($scope.btn)).bind("click",function(){
-                        document.getElementById(theThis.getAttribute("form")).submit();
+                    angular.element(document.getElementById($scope.btn)).bind("click",function(){  
+                        //ajax上传方式
+                        var opts = [];
+                            opts[$scope.name]= theThis.files[0];
+                            opts[$scope.jcrop]=$scope.viewDom.find("input").val();
+                        $scope.ajaxMethod(opts);
+                        //iframe上传方式
+                        //document.getElementById(theThis.getAttribute("form")).submit();
                     })
                 }
             });
