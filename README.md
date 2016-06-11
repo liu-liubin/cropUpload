@@ -37,6 +37,23 @@
 ——是否自动上传（true || false）  默认自动上传  
 9）btn  
 ——上传按钮 指定ID，如果设置此参数则auto失效  
-####返回值
-以json或html等方式返回到上传控件的data-result属性存储
+
+####回调函数返回值
+```
+var ngUpload = {
+    uploading:function(res){
+        //回调函数-正在上传，res返回百分比数值
+    },
+    before:function(ctrl){
+        //回调函数-上传之前，ctrl可以执行某些操作
+    },
+    success:function(file){
+        //回调函数-上传成功，返回文件内容等
+    }
+}
+```
+
 ##特别说明
+
+##持续更新中……
+
