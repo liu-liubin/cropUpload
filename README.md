@@ -1,8 +1,10 @@
 # cropUpload
 图片上传以及裁切上传功能，基于angularjs以及js原生代码裁切功能
 ##安装或引用
+```
 <script src="//cdn.bootcss.com/angular.js/1.4.9/angular.js"></script>
 <script src="js/image.crop.js"></script>
+```
 ##如何使用
 * html标签规则
 ```
@@ -37,6 +39,10 @@
 ——是否自动上传（true || false）  默认自动上传  
 9）btn  
 ——上传按钮 指定ID，如果设置此参数则auto失效  
+10）htmls  
+——控件选区里可写入Html代码。默认文字：上传图片  
+10）scale  
+——参数为scale="true"，表示等比缩放；否则自由缩放  
 
 ####回调函数返回值
 ```

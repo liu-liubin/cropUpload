@@ -10,11 +10,10 @@
     <script src="js/image.crop.js"></script>
 
 </head>
-<body ng-app="upload" >
-<div  ajax-upload style="border:solid 5px #333" action="upload.php" preview="preview" jcrop="zuobiao" btn="jcropBtn" >上传图片</div>
+<body ng-app="ngUpload" >
+<ajax-upload style="border:solid 5px #333" action="upload.php" preview="preview" jcrop="zuobiao" btn="jcropBtn" scale="true">上传图片</ajax-upload>
 <div id="preview"></div>
 <button type="button" id="jcropBtn">确定</button>
-
 
 <div  ajax-upload style="border:solid 5px #333" preview="preview">上传图片</div>
 
@@ -28,6 +27,7 @@ var ngUpload = {
     },
     before:function(ctrl){
         //回调函数-上传之前，ctrl可以执行某些操作
+        console.log(ctrl)
     },
     success:function(file){
         //回调函数-上传成功，返回文件内容等
@@ -57,18 +57,18 @@ var ngUpload = {
 
 * 特别提示：如果传参jcrop 那么auto设置为true将失效
 ************************************************/
-angular.module('upload',[])
+angular.module('ngUpload',[])
 .directive("ajaxUpload",function($http,$rootScope){
     return {
         restrict : "EA",
-        template : '',
-        replace : false,
+        template : '<div></div>',
+        replace : true,
         scope : {
             callback:"@",
             jcrop:"@"
         },
         controller:function($scope,$element,$attrs){
-
+            $element[0].innerHTML=$attrs.htmls || "上传图片";
             var def = {
                 action : $attrs.action || "",
                 method : $attrs.method || "post",
@@ -82,12 +82,15 @@ angular.module('upload',[])
                 btn: $attrs.btn || false
             }
 
+            $scope.optAccept = $attrs.accept || "*/*",
+            $scope.optSize = $attrs.size || 1024*1024*2; //默认最大上传2M
             $scope.wm_preview = def.preview;
             $scope.action = def.action;
             $scope.name = def.name;
             $scope.thumb = def.thumb.split(",");
             $scope.crop = def.crop.split(",");
             $scope.btn = def.btn?def.btn:(def.auto=="false"?false:true);
+            $scope.optScale = ($attrs.scale=="true"?true:false);
 
             angular.element($element).css({"position":"relative","border":"solid 1px #ccc","padding":"5px 10px","textAlign":"center"});
 
@@ -128,6 +131,7 @@ angular.module('upload',[])
             }
         },
         link:function($scope,$element,$attrs){
+
             //声明变量，原生js 、html、XMLHttpRequest
             var oFile,
             fd = new FormData(),
@@ -143,13 +147,13 @@ angular.module('upload',[])
             }
             
             //JS Ajax上传方式，html5 API支持
-            $scope.ajaxMethod = function(options){
-                //oFile = options.file.files[0];
+            $scope.ajaxMethod = function(options,o){
+                oFile = o.files[0];
                 for(var k in options){
                     fd.append(k, options[k]);
                 }
                 if(beforeSend instanceof Function){
-                    if(beforeSend(file) === false){
+                    if(beforeSend(oFile) === false){
                         return false;
                     }
                 }
@@ -186,23 +190,37 @@ angular.module('upload',[])
             
             //上传表单选择事件
             angular.element($element).find("input").bind("change",function(){
-     
-                
-                var reader = new FileReader();
+                var err = {};
+                if(!this.files[0]){
+                    err.error = "未选择文件";
+                    beforeSend(err);
+                    return false;
+                }
+                //文件限制回调-before
+                if(this.files[0].size > $scope.optSize){//限制文件大小
+                    err.error = "文件大小超过最大限制";
+                    beforeSend(err);
+                    return false;
+                }
+                var pertten = /^image/;
+                if(!pertten.test(this.files[0].type) && $scope.optAccept!="*/*"){
+                    err.error = "文件类型不能被接受";
+                    beforeSend(err);
+                    return false;
+                }
+                console.log($scope.optScale)
                 //是否创建预览------------预览裁切操作
                 if($scope.wm_preview){
+                    var reader = new FileReader();
                     //var oFile = this.files[0];
-                    reader.onload = function(){    
-                        //angular.element(document.getElementById($scope.wm_preview)) src="'+reader.result+'" style="height:200px;" 
-                        //$scope.viewDom.html('<img src="'+reader.result+'" style="height:200px;" ></img>'); 
-                      
+                    reader.onload = function(){                      
                         //是否启用裁剪插件，需引入jcrop.min.js
                         if($scope.jcrop){
                             var cropDiv = "WM_cropDiv"+$scope.formNum, dragDiv="WM_dragDiv"+$scope.formNum;
                             $scope.viewDom.html('<div id="'+dragDiv+'" class="wm_dragDiv"><input form="WMupload_form'+$scope.formNum+'" type="hidden" class="'+$scope.jcrop+'" name="'+$scope.jcrop+'"/><div id="rRightDown"> </div><div id="rLeftDown"> </div><div id="rRightUp"> </div><div id="rLeftUp"> </div><div id="rRight"> </div><div id="rLeft"> </div><div id="rUp"> </div><div id="rDown"></div></div>');
                             var ic = new ImgCropper(cropDiv, dragDiv, reader.result , {
                                 Width: $scope.thumb[0], Height: $scope.thumb[1], Color: "#555",
-                                Resize: true,coord:$scope.jcrop,
+                                Resize: true,/*coord:$scope.jcrop,*/Scale:$scope.optScale,Retio:1,
                                 Right: "rRight", Left: "rLeft", Up: "rUp", Down: "rDown",
                                 RightDown: "rRightDown", LeftDown: "rLeftDown", RightUp: "rRightUp", LeftUp: "rLeftUp",
                                 Preview: "viewDiv", viewWidth: 300, viewHeight: 300
@@ -221,7 +239,7 @@ angular.module('upload',[])
                     //ajax上传方式
                     var opts = [];
                         opts[$scope.name]= theThis.files[0];
-                    $scope.ajaxMethod(opts);
+                    $scope.ajaxMethod(opts,theThis);
                     //iframe上传方式
                     //document.getElementById(theThis.getAttribute("form")).submit();
                 }else{
@@ -230,7 +248,7 @@ angular.module('upload',[])
                         var opts = [];
                             opts[$scope.name]= theThis.files[0];
                             opts[$scope.jcrop]=$scope.viewDom.find("input").val();
-                        $scope.ajaxMethod(opts);
+                        $scope.ajaxMethod(opts,theThis);
                         //iframe上传方式
                         //document.getElementById(theThis.getAttribute("form")).submit();
                     })
